@@ -5,7 +5,7 @@ const wss1 = new WebSocket.WebSocketServer({ noServer: true });
 
 wss1.on('connection', function connection(ws) {
   ws.on('error', console.error);
-  console.log('連線成功');
+  console.log('後端ws，3000port 連線成功 ...');
   const uuid = uuidv4()
 
   ws.uuid = uuid; // 判斷是哪一個用戶使用
