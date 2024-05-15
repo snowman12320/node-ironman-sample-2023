@@ -1,54 +1,123 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Document</title>
+
+  <style>
+    #list {
+      list-style: none;
+      padding: 0;
+      width: 200px;
+      min-width: 200px;
+    }
+
+    .align-right {
+      text-align: right;
+    }
+
+    .align-left {
+      text-align: left;
+    }
+  </style>
 </head>
+
 <body>
-  
+  <h1>WebSocket</h1>
+  <h2>訊息</h2>
   <ul id="list"></ul>
   <input type="text" id="message">
   <button type="button" id="sendBtn">送出</button>
+
   <p>uuid: <span id="uuid"></span></p>
+  <hr>
+  <h2>邀請</h2>
+  <ul id="inviteList"></ul>
+  <button type="button" id="inviteBtn">邀請/收回</button>
 
   <script>
     const host = 'ws://localhost:3000/ws'
-    const inputMessage = document.querySelector('#message')
-    const spanUUID = document.querySelector('#uuid')
-    const ulList = document.querySelector('#list')
-    const btnSend = document.querySelector('#sendBtn')
+    // const host = 'wss://node-ironman-sample-2023.onrender.com/ws'
+    const inputMessage = document.querySelector( '#message' )
+    const spanUUID = document.querySelector( '#uuid' )
+    const ulList = document.querySelector( '#list' )
+    const btnSend = document.querySelector( '#sendBtn' )
+    const btnInvite = document.querySelector( '#inviteBtn' )
+    const ulInviteList = document.querySelector( '#inviteList' )
 
-    const ws = new WebSocket(host)
-    ws.onopen = (res) => {
-      console.log('連線成功：',res); // 連線成功
+    // 建立 WebSocket 連線
+    const ws = new WebSocket( host )
+    ws.onopen = ( res ) => {
+      console.log( '連線成功：', res ); // 連線成功
     }
 
+    // 接收訊息
     const messages = []
-    ws.onmessage = (res) => {
-      const data = JSON.parse(res.data)
-      console.log(data); // 接收到的訊息
-      if (data.context === 'user') {
+    // 接收通知
+    const notifications = []
+
+    ws.onmessage = ( res ) => {
+      const data = JSON.parse( res.data )
+      console.log( data ); // 接收到的訊息
+
+      if ( data.context === 'user' ) {
         spanUUID.innerHTML = data.uuid
-      } else if (data.context === 'message') {
-        messages.push(data)
-        const html = messages.map((item) => {
-          return `<li>${item.content}</li>`
-        }).join('')
-        ulList.innerHTML = html
+      }
+
+      if ( data.context === 'message' ) {
+        messages.push( data )
+
+        // 創建一個新的 li 元素來顯示新的訊息
+        const li = document.createElement( 'li' );
+        // 8cbc37af-c441-43be-a402-3ffb9dda516f 取得前 8 個字元
+        li.textContent = spanUUID.innerHTML.substring( 0, 8 ) + ':' + data.content;
+        // 如果訊息的 uuid 與這個客戶端的 uuid 相同，則將其對齊到右邊，否則將其對齊到左邊
+        li.className = data.uuid === spanUUID.innerHTML ? 'align-right' : 'align-left';
+        // 將新的 li 元素添加到訊息列表
+        ulList.appendChild( li );
+      }
+
+      if ( data.context === 'invite' ) {
+        const index = notifications.findIndex( notification => notification.from === data.from );
+
+        if ( index !== -1 ) {
+          notifications.splice( index, 1 );
+        } else {
+          notifications.push( data );
+        }
+
+        console.log( notifications );
+
+        const html = notifications.map( ( item ) => {
+          return `<li>來自${item.from}的邀請</li>`;
+        } ).join( '' );
+        ulInviteList.innerHTML = html;
+
       }
     }
 
-    btnSend.addEventListener('click', () => {
+    // 監聽各種按鈕
+    btnSend.addEventListener( 'click', () => {
       const value = inputMessage.value
-      ws.send(JSON.stringify({
+      ws.send( JSON.stringify( {
+        context: 'message',
         content: value
-      }))
+      } ) )
 
       inputMessage.value = ''
-    })
+    } )
 
+    btnInvite.addEventListener( 'click', () => {
+      const to = prompt( '請輸入要邀請的用戶 UUID' );
+      ws.send( JSON.stringify( {
+        context: 'invite',
+        to: to
+      } ) )
+    } )
 
   </script>
 </body>
+
 </html>
